@@ -1,0 +1,10 @@
+{
+  "compiler": {
+    "args": []
+  },
+  "includePaths": [],
+  "server": {
+    "args": [],
+    "logPath": ""
+  }
+}

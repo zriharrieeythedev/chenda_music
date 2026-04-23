@@ -1,0 +1,35 @@
+{
+  "props": {
+    "pageProps": {
+      "status": 404,
+      "title": "Page not found",
+      "description": "We can’t seem to find the page you are looking for.",
+      "links": [
+        {
+          "href": "https://open.spotify.com",
+          "title": "Home",
+          "isPrimaryStyle": true
+        },
+        {
+          "href": "https://support.spotify.com/",
+          "title": "Help",
+          "isPrimaryStyle": false
+        }
+      ],
+      "rtl": false,
+      "_sentryTraceData": "7e6da3f8c73ea993998a94413e093cc1-a58ef632a1fa8d0b-0",
+      "_sentryBaggage": "sentry-environment=production,sentry-release=1f04b312be96153d40388647471de29b98f03387,sentry-public_key=4cc707ab12ea4779b417479c0550a5cb,sentry-trace_id=7e6da3f8c73ea993998a94413e093cc1,sentry-org_id=22381,sentry-sampled=false,sentry-sample_rand=0.456072071223111,sentry-sample_rate=0"
+    },
+    "__N_SSP": true
+  },
+  "page": "/playlist/[id]",
+  "query": {
+    "id": "37i9dQZF1DXcBWIGoYBM3M"
+  },
+  "buildId": "eefed35f-7117-4a52-86e6-a5e57aea32aa",
+  "assetPrefix": "https://embed-cdn.spotifycdn.com",
+  "isFallback": false,
+  "isExperimentalCompile": false,
+  "gssp": true,
+  "scriptLoader": []
+}
