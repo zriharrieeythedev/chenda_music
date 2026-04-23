@@ -4,7 +4,6 @@ import axios from 'axios';
 import ytSearch from 'yt-search';
 
 const app = express();
-const PORT = 3001;
 
 app.use(cors());
 app.use(express.json());
@@ -16,7 +15,6 @@ async function fetchSpotifyPlaylist(url) {
         let fetchUrl = url;
         if (url.includes('open.spotify.com/playlist/')) {
             const playlistId = url.split('playlist/')[1].split('?')[0];
-            // The embed URL is often easier to parse for track metadata without JS
             fetchUrl = `https://open.spotify.com/embed/playlist/${playlistId}`;
         }
 
@@ -24,7 +22,8 @@ async function fetchSpotifyPlaylist(url) {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-            }
+            },
+            timeout: 8000 // Add timeout for Vercel
         });
 
         const match = data.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
@@ -48,7 +47,6 @@ async function fetchSpotifyPlaylist(url) {
             }
         }
         
-        // Fallback for metadata if full parsing fails
         const titleMatch = data.match(/<meta property="og:title" content="([^"]+)"/);
         const imageMatch = data.match(/<meta property="og:image" content="([^"]+)"/);
         
@@ -89,7 +87,6 @@ app.get('/api/playlist', async (req, res) => {
     }
 });
 
-// Endpoint to search YouTube for a song and return a playable video ID
 app.get('/api/search-audio', async (req, res) => {
     const { title, artist } = req.query;
     
@@ -105,7 +102,6 @@ app.get('/api/search-audio', async (req, res) => {
         const videos = r.videos.slice(0, 3);
         
         if (videos.length > 0) {
-            console.log(`Found YouTube video: ${videos[0].title} (${videos[0].videoId})`);
             res.json({
                 videoId: videos[0].videoId,
                 title: videos[0].title,
@@ -120,11 +116,5 @@ app.get('/api/search-audio', async (req, res) => {
         res.status(500).json({ error: 'Failed to search audio' });
     }
 });
-
-if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`Backend Server running on http://localhost:${PORT}`);
-    });
-}
 
 export default app;

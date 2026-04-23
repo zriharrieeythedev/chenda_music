@@ -22,6 +22,8 @@ function App() {
   const ytContainerRef = useRef(null);
   const progressRef = useRef(null);
 
+  const API_BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:3001' : '';
+
   const loadPlaylist = async () => {
     if (!playlistLink) return;
 
@@ -34,7 +36,7 @@ function App() {
     }
 
     try {
-        const response = await fetch(`http://localhost:3001/api/playlist?url=${encodeURIComponent(playlistLink)}`);
+        const response = await fetch(`${API_BASE_URL}/api/playlist?url=${encodeURIComponent(playlistLink)}`);
         const data = await response.json();
         
         if (data.error) throw new Error(data.error);
@@ -80,7 +82,7 @@ function App() {
 
     try {
        setIsLoading(true);
-       const searchRes = await fetch(`http://localhost:3001/api/search-audio?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`);
+       const searchRes = await fetch(`${API_BASE_URL}/api/search-audio?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`);
        const searchData = await searchRes.json();
        
        if (searchData.videoId) {
