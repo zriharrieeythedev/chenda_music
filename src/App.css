@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
+
 :root {
   --bg-color: #050505;
   --panel-bg: rgba(15, 15, 15, 0.85);
@@ -13,7 +15,6 @@
   --neon-shadow: 0 4px 20px rgba(255, 107, 53, 0.3);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&display=swap');
 
 * {
   margin: 0;

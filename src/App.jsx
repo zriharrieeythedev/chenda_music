@@ -47,9 +47,13 @@ function App() {
 
     try {
         const response = await fetch(`${API_BASE_URL}/api/playlist?url=${encodeURIComponent(targetUrl)}`);
+        if (!response.ok) {
+            if (response.status === 500) throw new Error("Server error: Failed to parse playlist. Check if the URL is public.");
+            throw new Error(`Server responded with ${response.status}`);
+        }
         const data = await response.json();
         
-        if (data.error) throw new Error(data.error);
+        if (data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
         
         setPlaylistMeta({
             title: data.title,
@@ -59,7 +63,12 @@ function App() {
         setSongs(data.tracks || []);
         
     } catch (err) {
-        setError(err.message || 'Failed to fetch playlist.');
+        console.error("Load error:", err);
+        if (err.message && typeof err.message === 'string' && err.message.includes('Failed to fetch')) {
+            setError('Cannot connect to backend. Did you start the server with "npm run server"?');
+        } else {
+            setError(err.message ? String(err.message) : 'Failed to fetch playlist.');
+        }
     } finally {
         setIsLoading(false);
     }
@@ -257,9 +266,9 @@ function App() {
           playsInline 
           className="loader-video-bg"
         >
-          <source src="https://cdn.pixabay.com/video/2021/09/01/87103-595393430_large.mp4" type="video/mp4" />
-          {/* Fallback to local file if available */}
-          <source src="/loading-bg.mp4" type="video/mp4" />
+          {/* Using a more reliable sample video link for the background */}
+          <source src="https://assets.mixkit.co/videos/preview/mixkit-abstract-music-background-with-glowing-lines-25255-large.mp4" type="video/mp4" />
+          <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
         </video>
         <div className="loader-overlay"></div>
         <div className="loader-content">

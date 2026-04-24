@@ -11,64 +11,94 @@ app.use(express.json());
 
 // Scrape Spotify playlist data directly from public URLs without API keys
 async function fetchSpotifyPlaylist(url) {
-    try {
-        console.log(`Fetching: ${url}`);
-        let fetchUrl = url;
-        if (url.includes('open.spotify.com/playlist/')) {
-            const playlistId = url.split('playlist/')[1].split('?')[0];
-            // The embed URL is often easier to parse for track metadata without JS
-            fetchUrl = `https://open.spotify.com/embed/playlist/${playlistId}`;
-        }
+    const mobileUA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4.1 Mobile/15E148 Safari/604.1';
+    const desktopUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36';
 
-        const { data } = await axios.get(fetchUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    const strategies = [
+        // Strategy 1: Embed URL
+        {
+            name: 'Embed',
+            getFetchUrl: (u) => {
+                const parts = u.split('?')[0].split('/');
+                const id = parts[parts.length - 1];
+                const type = u.includes('/album/') ? 'album' : (u.includes('/track/') ? 'track' : 'playlist');
+                return `https://open.spotify.com/embed/${type}/${id}`;
+            },
+            ua: desktopUA
+        },
+        // Strategy 2: Main URL with Mobile UA
+        {
+            name: 'Main (Mobile)',
+            getFetchUrl: (u) => u,
+            ua: mobileUA
+        }
+    ];
+
+    let lastError = null;
+
+    for (const strategy of strategies) {
+        try {
+            const fetchUrl = strategy.getFetchUrl(url);
+            console.log(`[Scraper] Trying ${strategy.name} strategy: ${fetchUrl}`);
+            
+            const { data } = await axios.get(fetchUrl, {
+                headers: {
+                    'User-Agent': strategy.ua,
+                    'Referer': 'https://open.spotify.com/',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                },
+                timeout: 8000
+            });
+
+            const match = data.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
+            if (match) {
+                const json = JSON.parse(match[1]);
+                // In main page, data is sometimes in props.pageProps.data or state
+                const entity = json.props?.pageProps?.state?.data?.entity || json.props?.pageProps?.data?.entity;
+
+                if (entity) {
+                    console.log(`[Scraper] Success using ${strategy.name}`);
+                    const isTrack = entity.type === 'track';
+                    const tracks = isTrack ? [entity] : (entity.trackList || entity.tracks?.items?.map(i => i.track || i) || []);
+                    const playlistCover = String(entity.coverArt?.sources?.[0]?.url || entity.images?.[0]?.url || 'https://placehold.co/600x600/121212/ffffff?text=No+Cover');
+                    
+                    return {
+                        title: String(entity.title || entity.name || 'Unknown Item'),
+                        description: String(entity.subtitle || entity.description || ''),
+                        coverUrl: playlistCover,
+                        tracks: tracks.map(t => ({
+                            title: String(t.title || t.name || 'Unknown Title'),
+                            artist: String(t.subtitle || t.artists?.[0]?.name || 'Unknown Artist'), 
+                            albumArt: String(t.thumbnail?.sources?.[0]?.url || t.album?.images?.[0]?.url || playlistCover),
+                            previewUrl: t.audioPreview?.url || t.preview_url,
+                            duration: Number(t.duration || t.duration_ms || 0)
+                        })).filter(t => t.title !== 'Unknown Title')
+                    };
+                }
             }
-        });
-
-        const match = data.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/);
-        if (match) {
-            const json = JSON.parse(match[1]);
-            const entity = json.props?.pageProps?.state?.data?.entity;
-
-            if (entity && entity.type === 'playlist') {
-                const tracks = entity.trackList || [];
-                return {
-                    title: entity.title || 'Unknown Playlist',
-                    description: entity.subtitle || '',
-                    coverUrl: entity.coverArt?.sources?.[0]?.url || 'https://placehold.co/300x300/121212/ffffff?text=No+Cover',
-                    tracks: tracks.map(t => ({
-                        title: t.title,
-                        artist: t.subtitle, 
-                        albumArt: t.thumbnail?.sources?.[0]?.url || 'https://placehold.co/150x150/121212/ffffff?text=No+Art',
-                        previewUrl: t.audioPreview?.url
-                    }))
-                };
+            
+            // Final fallback: OpenGraph
+            if (strategy.name === 'Main (Mobile)') {
+                const titleMatch = data.match(/<meta property="og:title" content="([^"]+)"/);
+                if (titleMatch && !titleMatch[1].includes("Page not found")) {
+                    const imageMatch = data.match(/<meta property="og:image" content="([^"]+)"/);
+                    const descMatch = data.match(/<meta property="og:description" content="([^"]+)"/);
+                    return {
+                        title: titleMatch[1],
+                        description: descMatch ? descMatch[1] : "",
+                        coverUrl: imageMatch ? imageMatch[1] : 'https://placehold.co/300x300/121212/ffffff?text=Spotify',
+                        tracks: [{ title: titleMatch[1], artist: "Spotify Content", albumArt: imageMatch ? imageMatch[1] : '' }]
+                    };
+                }
             }
+        } catch (err) {
+            console.error(`[Scraper] ${strategy.name} failed:`, err.message);
+            lastError = err;
         }
-        
-        // Fallback for metadata if full parsing fails
-        const titleMatch = data.match(/<meta property="og:title" content="([^"]+)"/);
-        const imageMatch = data.match(/<meta property="og:image" content="([^"]+)"/);
-        
-        if (titleMatch) {
-            return {
-                title: titleMatch[1],
-                description: "Playlist loaded from Spotify",
-                coverUrl: imageMatch ? imageMatch[1] : 'https://placehold.co/300x300/121212/ffffff?text=Playlist',
-                tracks: [
-                    { title: "No details parsed", artist: "Try another playlist", albumArt: 'https://placehold.co/150x150/121212/ffffff?text=Error' }
-                ]
-            };
-        }
-
-        throw new Error("Could not parse Spotify playlist data from URL");
-
-    } catch (error) {
-        console.error("Scraping error:", error.message);
-        throw error;
     }
+
+    throw lastError || new Error("Could not parse Spotify data from any known location.");
 }
 
 app.get('/api/playlist', async (req, res) => {
