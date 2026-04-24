@@ -8,6 +8,7 @@ function App() {
   const [currentSongIndex, setCurrentSongIndex] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
   const [error, setError] = useState('');
   
   const [currentTime, setCurrentTime] = useState(0);
@@ -24,8 +25,17 @@ function App() {
 
   const API_BASE_URL = import.meta.env.MODE === 'development' ? 'http://localhost:3001' : '';
 
-  const loadPlaylist = async () => {
-    if (!playlistLink) return;
+  const DEFAULT_PLAYLISTS = [
+    { id: 1, name: 'Chenda Vibe', url: 'https://open.spotify.com/playlist/6TTntjkpJiwFyUtWHkCZcs?si=3e08189589ba46e7' },
+    { id: 2, name: 'Melody Mix', url: 'https://open.spotify.com/playlist/6TTntjkpJiwFyUtWHkCZcs?si=89aa8d3dc2984975' },
+    { id: 3, name: 'Pachavalli Hits', url: 'https://open.spotify.com/playlist/2z7aLDP14iW00zHj15CIek?si=6f26ab7365bd4627' }
+  ];
+
+  const loadPlaylist = async (directUrl = null) => {
+    const targetUrl = directUrl || playlistLink;
+    if (!targetUrl) return;
+
+    if (directUrl) setPlaylistLink(directUrl);
 
     setIsLoading(true);
     setError('');
@@ -36,7 +46,7 @@ function App() {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/playlist?url=${encodeURIComponent(playlistLink)}`);
+        const response = await fetch(`${API_BASE_URL}/api/playlist?url=${encodeURIComponent(targetUrl)}`);
         const data = await response.json();
         
         if (data.error) throw new Error(data.error);
@@ -62,6 +72,13 @@ function App() {
       const firstScriptTag = document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
     }
+    
+    // App loading simulation
+    const timer = setTimeout(() => {
+      setAppLoading(false);
+    }, 2500);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const playSong = async (index) => {
@@ -230,6 +247,24 @@ function App() {
     return () => audio.removeEventListener('ended', handleEnd);
   }, [currentSongIndex, songs, shuffle]);
 
+  if (appLoading) {
+    return (
+      <div className="app-loader-container">
+        <div className="loader-content">
+          <div className="loader-logo">
+            <img src="/logo.png" alt="Chenda" />
+            <div className="logo-ring"></div>
+          </div>
+          <h1 className="loader-title">Chenda</h1>
+          <p className="loader-subtitle">Loading your music experience...</p>
+          <div className="loader-bar-wrapper">
+             <div className="loader-bar-fill"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container">
       <div id="yt-player-container" ref={ytContainerRef} className="hidden"></div>
@@ -257,6 +292,23 @@ function App() {
             <span className="icon">📚</span> Your Library
           </a>
         </nav>
+        
+        <div className="playlists-section">
+          <h3 className="section-title">Your Playlists</h3>
+          <div className="playlists-list">
+            {DEFAULT_PLAYLISTS.map((pl) => (
+              <div 
+                key={pl.id} 
+                className={`playlist-item ${playlistLink === pl.url ? 'active' : ''}`}
+                onClick={() => loadPlaylist(pl.url)}
+              >
+                <span className="playlist-icon">🎵</span>
+                <span className="playlist-name">{pl.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
         <div className="sidebar-footer">
           <p>Created by Pachavalli Developers</p>
         </div>
@@ -270,6 +322,24 @@ function App() {
 
         <section className="playlist-input-section">
           <h2>Listen to anything</h2>
+          
+          <div className="default-playlists-grid">
+            {DEFAULT_PLAYLISTS.map((pl) => (
+              <div 
+                key={pl.id} 
+                className="playlist-card-mini"
+                onClick={() => loadPlaylist(pl.url)}
+              >
+                <div className="pl-icon">🎵</div>
+                <div className="pl-details">
+                   <h4>{pl.name}</h4>
+                   <p>Spotify Playlist</p>
+                </div>
+                <button className="pl-play-btn">▶</button>
+              </div>
+            ))}
+          </div>
+
           <div className="input-wrapper">
             <input 
               type="text" 
