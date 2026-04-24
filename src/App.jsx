@@ -250,10 +250,21 @@ function App() {
   if (appLoading) {
     return (
       <div className="app-loader-container">
+        <video 
+          autoPlay 
+          muted 
+          loop 
+          playsInline 
+          className="loader-video-bg"
+        >
+          <source src="https://cdn.pixabay.com/video/2021/09/01/87103-595393430_large.mp4" type="video/mp4" />
+          {/* Fallback to local file if available */}
+          <source src="/loading-bg.mp4" type="video/mp4" />
+        </video>
+        <div className="loader-overlay"></div>
         <div className="loader-content">
           <div className="loader-logo">
             <img src="/logo.png" alt="Chenda" />
-            <div className="logo-ring"></div>
           </div>
           <h1 className="loader-title">Chenda</h1>
           <p className="loader-subtitle">Loading your music experience...</p>
